@@ -36,7 +36,6 @@ const Auth = () => {
       } else {
         data = await signInWithEmailAndPassword(auth, email, password);
       }
-      console.log(data);
     } catch (error) {
       setError(error.message);
     }
@@ -52,8 +51,9 @@ const Auth = () => {
     } else if (name === "github") {
       provider = new GithubAuthProvider();
     }
-    const data = await signInWithPopup(auth, provider);
-    console.log(data);
+    const data = await signInWithPopup(auth, provider).catch((error) => {
+      setError(error.message);
+    });
   };
   return (
     <div>
