@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { dbService } from "./fbase";
+import { dbService, storageService } from "./fbase";
+import { v4 as uuidv4 } from "uuid";
 import {
   collection,
-  addDoc,
   onSnapshot,
   query,
   orderBy,
+  addDoc,
 } from "firebase/firestore";
+import { getDownloadURL, ref, uploadString } from "firebase/storage";
 import Tweet from "components/Tweet";
 
 const Home = ({ userObj }) => {
   const [tweet, setTweet] = useState("");
   const [tweets, setTweets] = useState([]);
-  const [attachment, setAttachment] = useState();
+  const [attachment, setAttachment] = useState("");
 
   useEffect(() => {
     const q = query(
@@ -29,16 +31,25 @@ const Home = ({ userObj }) => {
   }, []);
   const onSubmit = async (event) => {
     event.preventDefault();
-    try {
-      const docRef = await addDoc(collection(dbService, "tweet"), {
-        text: tweet,
-        createdAt: Date.now(),
-        creatorId: userObj.uid,
-      });
-    } catch (e) {
-      console.error("Error adding document: ", e);
+    let attachmentUrl = "";
+    if (attachment !== "") {
+      const attachmentRef = ref(storageService, `${userObj.uid}/${uuidv4()}`);
+      const response = await uploadString(
+        attachmentRef,
+        attachment,
+        "data_url"
+      );
+      attachmentUrl = await getDownloadURL(response.ref);
     }
+    const tweetObj = {
+      text: tweet,
+      createdAt: Date.now(),
+      creatorId: userObj.uid,
+      attachmentUrl,
+    };
+    await addDoc(collection(dbService, "tweet"), tweetObj);
     setTweet("");
+    setAttachment("");
   };
   const onChange = (event) => {
     const {
@@ -60,7 +71,7 @@ const Home = ({ userObj }) => {
     };
     reader.readAsDataURL(theFile);
   };
-  const onClearAttachmentClick = () => setAttachment(null);
+  const onClearAttachmentClick = () => setAttachment("");
   return (
     <div>
       <form onSubmit={onSubmit}>
